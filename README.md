@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/navicore/akka-persistence-cassandra-demo.svg?branch=master)](https://travis-ci.org/navicore/akka-persistence-cassandra-demo)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/18ad81a51b274a9d9787f6e85be661d5)](https://www.codacy.com/app/navicore/akka-persistence-cassandra-demo?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=navicore/akka-persistence-cassandra-demo&amp;utm_campaign=Badge_Grade)
 
 An Akka HTTP API Server persisting objects with Akka Persistence for Cassandra
 ---
