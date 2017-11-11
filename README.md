@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/navicore/akka-persistence-cassandra-demo.svg?branch=master)](https://travis-ci.org/navicore/akka-persistence-cassandra-demo)
+
 An Akka HTTP API Server persisting objects with Akka Persistence for Cassandra
 ---
 
