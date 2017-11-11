@@ -1,5 +1,11 @@
-An Akka HTTP API Server persisting objects with Phantom for Cassandra
+An Akka HTTP API Server persisting objects with Akka Persistence for Cassandra
 ---
+
+# UNDER CONSTRUCTION
+
+# UNDER CONSTRUCTION
+
+# UNDER CONSTRUCTION
 
 ## RUN
 
