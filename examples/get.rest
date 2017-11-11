@@ -1,0 +1,25 @@
+currentId = ce11d299-5aa4-4346-951b-3ed0cd78d09c
+
+--
+
+# STAR HERE and create your fist db entry
+http://localhost:8080
+Content-Type: application/json; charset=utf-8
+POST /api/assessment
+{"name": "one", "value": 88.011}
+
+# Get the last thre
+http://localhost:8080
+Content-Type: application/json; charset=utf-8
+GET /api/assessment?name=one&limit=3
+
+# Copy the id from the POST result to the currentId var at top of file and retrieve by ID
+http://localhost:8080
+Content-Type: application/json; charset=utf-8
+GET /api/assessment/:currentId
+
+# Delete by ID
+http://localhost:8080
+Content-Type: application/json; charset=utf-8
+DELETE /api/assessment/:currentId
+
