@@ -6,6 +6,7 @@ import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import onextent.akka.persistence.demo.actors.AssessmentService._
+import onextent.akka.persistence.demo.actors.fuctions.ActorServiceSupport
 import onextent.akka.persistence.demo.models.assessments._
 
 object AssessmentService {

@@ -1,6 +1,7 @@
-package onextent.akka.persistence.demo.actors
+package onextent.akka.persistence.demo.actors.fuctions
 
 import akka.actor._
+import onextent.akka.persistence.demo.actors.AssessmentActor
 
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
