@@ -8,9 +8,6 @@ import com.typesafe.scalalogging.LazyLogging
 import onextent.akka.persistence.demo.actors.AssessmentService._
 import onextent.akka.persistence.demo.models.assessments._
 
-import scala.reflect.ClassTag
-import scala.reflect.runtime.universe._
-
 object AssessmentService {
   def props(implicit timeout: Timeout) = Props(new AssessmentService)
   def name = "AssessmentService"
@@ -20,7 +17,7 @@ object AssessmentService {
 }
 
 class AssessmentService(implicit timeout: Timeout)
-    extends Actor
+    extends ActorServiceSupport
     with PersistentActor
     with LazyLogging {
 
@@ -30,32 +27,6 @@ class AssessmentService(implicit timeout: Timeout)
     conf.getString("main.assessmentPersistenceId") + "_service"
   var state: List[String] = List[String]()
 
-  //ugh
-  private def forwardIfExists[T: TypeTag](query: T, actorId: String)(
-      implicit tag: ClassTag[T]): Unit = {
-    def notFound(): Unit = sender() ! None
-    context
-      .child(actorId)
-      .fold(notFound())(_ forward query)
-  }
-  //ugh
-  private def forward[T: TypeTag](query: T, actorId: String)(
-      implicit tag: ClassTag[T]): Unit = {
-    def notFound(): Unit =
-      context.actorOf(AssessmentActor.props(actorId), actorId) forward query
-    context
-      .child(actorId)
-      .fold(notFound())(_ forward query)
-  }
-  //ugh - more correct to send a delete and then a poison pill in case it gets created again
-  private def stop[T: TypeTag](query: T, actorId: String)(
-      implicit tag: ClassTag[T]): Unit = {
-    def notFound(): Unit = sender() ! None
-    context
-      .child(actorId)
-      .fold(notFound())(context.stop)
-  }
-
   override def receiveRecover: Receive = {
 
     case assessment: Assessment =>
@@ -64,12 +35,11 @@ class AssessmentService(implicit timeout: Timeout)
 
     case deleteCmd: DeleteByName =>
       state = state.filter(n => n != deleteCmd.name)
-      stop[DeleteByName](deleteCmd, deleteCmd.name)
+      stopActor[DeleteByName](deleteCmd, deleteCmd.name)
 
-    case SnapshotOffer(_, snapshot: List[String @unchecked]) => state = snapshot
-      snapshot.foreach(actorId => {
-        context.actorOf(AssessmentActor.props(actorId), actorId)
-      })
+    case SnapshotOffer(_, snapshot: List[String @unchecked]) =>
+      state = snapshot
+      snapshot.foreach(createAssessmentActor)
       state = snapshot
 
   }
@@ -88,10 +58,10 @@ class AssessmentService(implicit timeout: Timeout)
 
     case deleteCmd: DeleteByName =>
       if (state.contains(deleteCmd.name)) {
-        state = state.filter(n => n != deleteCmd.name)
-        stop[DeleteByName](deleteCmd, deleteCmd.name)
         persistAsync(deleteCmd) { _ =>
           {
+            state = state.filter(n => n != deleteCmd.name)
+            stopActor[DeleteByName](deleteCmd, deleteCmd.name)
             sender() ! Some(deleteCmd)
             if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
               saveSnapshot(state)
