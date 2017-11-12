@@ -8,6 +8,9 @@ import com.typesafe.scalalogging.LazyLogging
 import onextent.akka.persistence.demo.actors.AssessmentService._
 import onextent.akka.persistence.demo.models.assessments._
 
+import scala.reflect.ClassTag
+import scala.reflect.runtime.universe._
+
 object AssessmentService {
   def props(implicit timeout: Timeout) = Props(new AssessmentService)
   def name = "AssessmentService"
@@ -23,45 +26,82 @@ class AssessmentService(implicit timeout: Timeout)
 
   val conf: Config = ConfigFactory.load()
   val snapShotInterval: Int = conf.getInt("main.snapShotInterval")
-  override def persistenceId: String = conf.getString("main.assessmentPersistenceId")
+  override def persistenceId: String =
+    conf.getString("main.assessmentPersistenceId") + "_service"
+  var state: List[String] = List[String]()
 
-  var state: Map[String, Assessment] = Map[String, Assessment]()
+  //ugh
+  private def forwardIfExists[T: TypeTag](query: T, actorId: String)(
+      implicit tag: ClassTag[T]): Unit = {
+    def notFound(): Unit = sender() ! None
+    context
+      .child(actorId)
+      .fold(notFound())(_ forward query)
+  }
+  //ugh
+  private def forward[T: TypeTag](query: T, actorId: String)(
+      implicit tag: ClassTag[T]): Unit = {
+    def notFound(): Unit =
+      context.actorOf(AssessmentActor.props(actorId), actorId) forward query
+    context
+      .child(actorId)
+      .fold(notFound())(_ forward query)
+  }
+  //ugh - more correct to send a delete and then a poison pill in case it gets created again
+  private def stop[T: TypeTag](query: T, actorId: String)(
+      implicit tag: ClassTag[T]): Unit = {
+    def notFound(): Unit = sender() ! None
+    context
+      .child(actorId)
+      .fold(notFound())(context.stop)
+  }
 
   override def receiveRecover: Receive = {
 
     case assessment: Assessment =>
-      state = state + (assessment.name -> assessment)
+      state = assessment.name :: state
+      forward(assessment, assessment.name)
 
     case deleteCmd: DeleteByName =>
-      state = state - deleteCmd.name
+      state = state.filter(n => n != deleteCmd.name)
+      stop[DeleteByName](deleteCmd, deleteCmd.name)
 
-    case SnapshotOffer(_, snapshot: Map[String, Assessment] @unchecked) => state = snapshot
+    case SnapshotOffer(_, snapshot: List[String @unchecked]) => state = snapshot
+      snapshot.foreach(actorId => {
+        context.actorOf(AssessmentActor.props(actorId), actorId)
+      })
+      state = snapshot
 
   }
 
   override def receiveCommand: Receive = {
 
     case assessment: Assessment =>
-      state = state + (assessment.name -> assessment)
-      persistAsync(assessment) { a =>
+      persistAsync(assessment) { _ =>
         {
-          sender() ! Some(a)
+          state = assessment.name :: state
+          forward(assessment, assessment.name)
           if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
             saveSnapshot(state)
         }
       }
 
     case deleteCmd: DeleteByName =>
-      state = state - deleteCmd.name
-      persistAsync(deleteCmd) { _ =>
-        {
-          sender() ! Some(deleteCmd)
-          if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
-            saveSnapshot(state)
+      if (state.contains(deleteCmd.name)) {
+        state = state.filter(n => n != deleteCmd.name)
+        stop[DeleteByName](deleteCmd, deleteCmd.name)
+        persistAsync(deleteCmd) { _ =>
+          {
+            sender() ! Some(deleteCmd)
+            if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
+              saveSnapshot(state)
+          }
         }
+      } else {
+        sender() ! None
       }
 
-    case GetByName(name) => sender() ! state.get(name)
+    case GetByName(name) => forwardIfExists(GetByName(name), name)
 
   }
 
