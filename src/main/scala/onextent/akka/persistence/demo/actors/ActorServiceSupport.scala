@@ -5,6 +5,7 @@ import akka.actor._
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
+// ugh, todo: clean these up
 trait ActorServiceSupport extends Actor {
 
   def createAssessmentActor(actorId: String): Unit = {
