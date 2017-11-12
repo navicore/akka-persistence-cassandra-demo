@@ -1,25 +1,19 @@
-currentId = ce11d299-5aa4-4346-951b-3ed0cd78d09c
-
+currentName = two
 --
 
 # STAR HERE and create your fist db entry
-http://localhost:8080
+http://localhost:8000
 Content-Type: application/json; charset=utf-8
 POST /api/assessment
-{"name": "one", "value": 88.011}
+{"name": "two", "value": 13.012}
 
-# Get the last thre
-http://localhost:8080
+# Get the last update to named assessment
+http://localhost:8000
 Content-Type: application/json; charset=utf-8
-GET /api/assessment?name=one&limit=3
+GET /api/assessment/:currentName
 
-# Copy the id from the POST result to the currentId var at top of file and retrieve by ID
-http://localhost:8080
+# Delete by name
+http://localhost:8000
 Content-Type: application/json; charset=utf-8
-GET /api/assessment/:currentId
-
-# Delete by ID
-http://localhost:8080
-Content-Type: application/json; charset=utf-8
-DELETE /api/assessment/:currentId
+DELETE /api/assessment/:currentName
 

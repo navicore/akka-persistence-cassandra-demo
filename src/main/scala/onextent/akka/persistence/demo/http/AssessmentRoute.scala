@@ -25,9 +25,9 @@ object AssessmentRoute
       handleErrors {
         cors(corsSettings) {
 
-          path(urlpath / "assessment" / JavaUUID) { id =>
+          path(urlpath / "assessment" / Segment) { name =>
             get {
-              val f: Future[Any] = service ask GetById(id)
+              val f: Future[Any] = service ask GetByName(name)
               onSuccess(f) { (r: Any) =>
                 {
                   r match {
@@ -41,13 +41,12 @@ object AssessmentRoute
               }
             } ~
               delete {
-                val f: Future[Any] = service ask Delete(id)
+                val f: Future[Any] = service ask DeleteByName(name)
                 onSuccess(f) { (r: Any) =>
                   {
                     r match {
-                      case Delete(deletedId) =>
-                        complete(StatusCodes.OK,
-                                 s"assessment $deletedId deleted")
+                      case Some(DeleteByName(_)) =>
+                        complete(StatusCodes.OK, s"assessment $name deleted")
                       case _ =>
                         complete(StatusCodes.NotFound)
                     }
@@ -57,45 +56,24 @@ object AssessmentRoute
 
           } ~
             path(urlpath / "assessment") {
-              get {
-                parameters('name.as[String], 'limit.as[Int] ? defaultLimit) {
-                  (name, limit) =>
-                    {
-                      val f: Future[Any] = service ask GetByName(name, limit)
-                      onSuccess(f) { (r: Any) =>
-                        {
-                          r match {
-                            case assessments: List[Assessment @unchecked] =>
-                              complete(
-                                HttpEntity(ContentTypes.`application/json`,
-                                           assessments.toJson.prettyPrint))
-                            case _ =>
-                              complete(StatusCodes.NotFound)
-                          }
-                        }
-                      }
-                    }
-                }
-              } ~
-                post {
-                  decodeRequest {
-                    entity(as[Assessment]) { assessment =>
-                      val f: Future[Any] = service ask assessment
-                      onSuccess(f) { (r: Any) =>
-                        {
-                          r match {
-                            case Some(assessment: Assessment) =>
-                              complete(
-                                HttpEntity(ContentTypes.`application/json`,
-                                           assessment.toJson.prettyPrint))
-                            case _ =>
-                              complete(StatusCodes.NotFound)
-                          }
+              post {
+                decodeRequest {
+                  entity(as[Assessment]) { assessment =>
+                    val f: Future[Any] = service ask assessment
+                    onSuccess(f) { (r: Any) =>
+                      {
+                        r match {
+                          case Some(assessment: Assessment) =>
+                            complete(HttpEntity(ContentTypes.`application/json`,
+                                                assessment.toJson.prettyPrint))
+                          case _ =>
+                            complete(StatusCodes.NotFound)
                         }
                       }
                     }
                   }
                 }
+              }
             }
         }
       }

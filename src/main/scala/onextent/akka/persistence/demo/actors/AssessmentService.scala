@@ -1,51 +1,67 @@
 package onextent.akka.persistence.demo.actors
 
-import java.util.UUID
-
-import akka.pattern.ask
 import akka.actor._
+import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.util.Timeout
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import onextent.akka.persistence.demo.actors.AssessmentService._
 import onextent.akka.persistence.demo.models.assessments._
-
-import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object AssessmentService {
   def props(implicit timeout: Timeout) = Props(new AssessmentService)
   def name = "AssessmentService"
 
-  final case class GetByName(name: String, limit: Int)
-  final case class GetById(id: UUID)
-  final case class Delete(id: UUID)
+  final case class GetByName(name: String)
+  final case class DeleteByName(name: String)
 }
+
 class AssessmentService(implicit timeout: Timeout)
     extends Actor
+    with PersistentActor
     with LazyLogging {
 
-  implicit val executionContext: ExecutionContextExecutor = context.dispatcher
-  val exampleActor: ActorRef = context.actorOf( Props(new ExamplePersistentActor), "examplePersistentActor")
-  val af: Future[Any] = exampleActor ask "a"
-  af.onComplete(f => logger.debug(s"ejs a got ${f.getOrElse("none")}"))
-  exampleActor ask "b"
-  exampleActor ask "c"
-  exampleActor ask "d"
-  val bf = exampleActor ask "state"
-  bf.onComplete(f => logger.debug(s"ejs state got ${f.getOrElse("none")}"))
-  exampleActor ask "e"
+  val conf: Config = ConfigFactory.load()
+  val snapShotInterval: Int = conf.getInt("main.snapShotInterval")
+  override def persistenceId: String = conf.getString("main.assessmentPersistenceId")
 
-  override def receive: PartialFunction[Any, Unit] = {
+  var state: Map[String, Assessment] = Map[String, Assessment]()
 
-    case Delete(id)             =>
+  override def receiveRecover: Receive = {
 
-    case GetById(id)            =>
+    case assessment: Assessment =>
+      state = state + (assessment.name -> assessment)
 
-    case GetByName(name, limit) =>
+    case deleteCmd: DeleteByName =>
+      state = state - deleteCmd.name
 
-    // store
-    case Assessment(name, value, _, _) =>
+    case SnapshotOffer(_, snapshot: Map[String, Assessment] @unchecked) => state = snapshot
 
-    case _                             => sender() ! "huh?"
+  }
+
+  override def receiveCommand: Receive = {
+
+    case assessment: Assessment =>
+      state = state + (assessment.name -> assessment)
+      persistAsync(assessment) { a =>
+        {
+          sender() ! Some(a)
+          if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
+            saveSnapshot(state)
+        }
+      }
+
+    case deleteCmd: DeleteByName =>
+      state = state - deleteCmd.name
+      persistAsync(deleteCmd) { _ =>
+        {
+          sender() ! Some(deleteCmd)
+          if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
+            saveSnapshot(state)
+        }
+      }
+
+    case GetByName(name) => sender() ! state.get(name)
 
   }
 
