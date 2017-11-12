@@ -1,7 +1,7 @@
 package onextent.akka.persistence.demo.actors
 
 import akka.actor._
-import akka.persistence.{PersistentActor, SnapshotOffer}
+import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import onextent.akka.persistence.demo.actors.AssessmentService.GetByName
@@ -31,6 +31,8 @@ class AssessmentActor(name: String)
 
     case SnapshotOffer(_, snapshot: Assessment) => state = Some(snapshot)
 
+    case _: RecoveryCompleted =>
+      logger.info(s"assessment $name recovery completed")
   }
 
   override def receiveCommand: Receive = {

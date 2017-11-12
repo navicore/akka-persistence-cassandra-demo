@@ -5,15 +5,16 @@ import akka.actor._
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
-// ugh, todo: clean these up
 trait ActorServiceSupport extends Actor {
 
   def createAssessmentActor(actorId: String): Unit = {
-    def notFound(): Unit = context.actorOf(AssessmentActor.props(actorId), actorId)
+    def notFound(): Unit =
+      context.actorOf(AssessmentActor.props(actorId), actorId)
     context
       .child(actorId)
       .fold(notFound())(_ => {})
   }
+
   def forwardIfExists[T: TypeTag](query: T, actorId: String)(
       implicit tag: ClassTag[T]): Unit = {
     def notFound(): Unit = sender() ! None
@@ -21,6 +22,8 @@ trait ActorServiceSupport extends Actor {
       .child(actorId)
       .fold(notFound())(_ forward query)
   }
+
+  // create if does not exist
   def forward[T: TypeTag](query: T, actorId: String)(
       implicit tag: ClassTag[T]): Unit = {
     def notFound(): Unit =
@@ -29,10 +32,9 @@ trait ActorServiceSupport extends Actor {
       .child(actorId)
       .fold(notFound())(_ forward query)
   }
-  //ugh - more correct to send a delete and then a poison pill in case it gets created again
-  def stopActor[T: TypeTag](query: T, actorId: String)(
-      implicit tag: ClassTag[T]): Unit = {
-    def notFound(): Unit = sender() ! None
+
+  def stopActor(actorId: String): Unit = {
+    def notFound(): Unit = Unit
     context
       .child(actorId)
       .fold(notFound())(context.stop)

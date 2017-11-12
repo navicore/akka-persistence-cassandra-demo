@@ -1,7 +1,7 @@
 package onextent.akka.persistence.demo.actors
 
 import akka.actor._
-import akka.persistence.{PersistentActor, SnapshotOffer}
+import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
@@ -35,21 +35,23 @@ class AssessmentService(implicit timeout: Timeout)
 
     case deleteCmd: DeleteByName =>
       state = state.filter(n => n != deleteCmd.name)
-      stopActor[DeleteByName](deleteCmd, deleteCmd.name)
+      stopActor(deleteCmd.name)
 
     case SnapshotOffer(_, snapshot: List[String @unchecked]) =>
-      state = snapshot
       snapshot.foreach(createAssessmentActor)
       state = snapshot
+
+    case _: RecoveryCompleted =>
+      logger.info("assessment service recovery completed")
 
   }
 
   override def receiveCommand: Receive = {
 
     case assessment: Assessment =>
+      state = assessment.name :: state
       persistAsync(assessment) { _ =>
         {
-          state = assessment.name :: state
           forward(assessment, assessment.name)
           if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
             saveSnapshot(state)
@@ -58,10 +60,10 @@ class AssessmentService(implicit timeout: Timeout)
 
     case deleteCmd: DeleteByName =>
       if (state.contains(deleteCmd.name)) {
+        state = state.filter(n => n != deleteCmd.name)
         persistAsync(deleteCmd) { _ =>
           {
-            state = state.filter(n => n != deleteCmd.name)
-            stopActor[DeleteByName](deleteCmd, deleteCmd.name)
+            stopActor(deleteCmd.name)
             sender() ! Some(deleteCmd)
             if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0)
               saveSnapshot(state)
