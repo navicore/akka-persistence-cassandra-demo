@@ -14,6 +14,7 @@ object Main extends App with LazyLogging with ErrorSupport {
 
   implicit val actorSystem: ActorSystem = ActorSystem("rest-system")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
+
   implicit val executionContext: ExecutionContextExecutor =
     actorSystem.dispatcher
 
@@ -26,4 +27,5 @@ object Main extends App with LazyLogging with ErrorSupport {
       AssessmentRoute(assessmentService)
 
   Http().bindAndHandle(route, "0.0.0.0", port)
+
 }
