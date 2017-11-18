@@ -29,7 +29,7 @@ class AssessmentActor(name: String)
     case assessment: Assessment =>
       state = Some(assessment)
 
-    case SnapshotOffer(_, snapshot: Assessment) => state = Some(snapshot)
+    case SnapshotOffer(_, snapshot: Option[Assessment]) => state = snapshot
 
     case _: RecoveryCompleted =>
       logger.info(s"assessment $name recovery completed")

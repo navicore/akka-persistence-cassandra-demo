@@ -32,6 +32,10 @@ libraryDependencies ++=
     "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
     "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
 
+    // if mongodb api instead, use...
+    //"com.github.scullxbones" %% "akka-persistence-mongo-casbah" % "2.0.4",
+    //"org.mongodb" %% "casbah" % "3.1.1",
+
     "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.58",
     "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.58" % "test",
 
