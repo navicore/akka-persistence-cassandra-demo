@@ -1,3 +1,8 @@
+<!-- ghmig:moved -->
+> **This repository has moved to [https://git.navicore.tech/navicore/akka-persistence-cassandra-demo](https://git.navicore.tech/navicore/akka-persistence-cassandra-demo).**
+>
+> The GitHub copy is archived and no longer maintained.
+
 [![Build Status](https://travis-ci.org/navicore/akka-persistence-cassandra-demo.svg?branch=master)](https://travis-ci.org/navicore/akka-persistence-cassandra-demo)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/18ad81a51b274a9d9787f6e85be661d5)](https://www.codacy.com/app/navicore/akka-persistence-cassandra-demo?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=navicore/akka-persistence-cassandra-demo&amp;utm_campaign=Badge_Grade)
 
@@ -26,4 +31,3 @@ sbt assembly && docker build -t myimage .
 * `sbt assembly` works
 * `sbt assembly && docker build -t myimage .` builds a usable Docker image
 * The only Cassandra-specific things in this example are found in `application.conf` and `build.sbt`.  You should be able to use any API conforming persistence plugin with this example code.
-
